@@ -15,6 +15,7 @@ import android.widget.SearchView
 import androidx.appcompat.app.AlertDialog
 import io.realm.*
 import java.util.*
+import android.widget.Toast
 
 const val EXTRA_TASK="jp.techacademy.thion.maikeru.taskapp.TASK"
 
@@ -58,12 +59,15 @@ class MainActivity : AppCompatActivity() {
         searchView.setOnQueryTextListener(object :SearchView.OnQueryTextListener {
             override fun onQueryTextChange(newText:String):Boolean{
                 val searchRealmResults = mRealm.where(Task::class.java).equalTo("category",newText).findAll()
-                mTaskAdapter.mTaskList = mRealm.copyFromRealm(searchRealmResults)
+                if(searchRealmResults!=null){
+                    mTaskAdapter.mTaskList = mRealm.copyFromRealm(searchRealmResults)
 
-                // TaskのListView用のアダプタに渡す
-                listView1.adapter = mTaskAdapter
-                mTaskAdapter.notifyDataSetChanged()
-                // 表示を更新するために、アダプターにデータが変更されたことを知らせる
+                    // TaskのListView用のアダプタに渡す
+                    listView1.adapter = mTaskAdapter
+                    mTaskAdapter.notifyDataSetChanged()}
+                else{
+                    Toast.makeText(this@MainActivity, "No Match found",Toast.LENGTH_LONG).show()
+                }
                 return false
             }
             override fun onQueryTextSubmit(query:String):Boolean{
@@ -133,17 +137,6 @@ class MainActivity : AppCompatActivity() {
         mRealm.close()
     }
 
-    private fun addTaskForTest() {
-        val task = Task()
-        task.title = "作業"
-        task.contents = "プログラムを書いてPUSHする"
-        task.date = Date()
-        task.category="プライベート"
-        task.id = 0
-        mRealm.beginTransaction()
-        mRealm.copyToRealmOrUpdate(task)
-        mRealm.commitTransaction()
-    }
 }
 
 /*private fun <E> RealmQuery<E>.equalTo(s: String, query: CharSequence?): Any {
