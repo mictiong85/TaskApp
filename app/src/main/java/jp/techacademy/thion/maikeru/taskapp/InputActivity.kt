@@ -1,9 +1,13 @@
 package jp.techacademy.thion.maikeru.taskapp
 
+import android.app.AlarmManager
 import android.app.DatePickerDialog
+import android.app.PendingIntent
 import android.app.TimePickerDialog
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.appcompat.widget.Toolbar
 import io.realm.Realm
@@ -76,6 +80,7 @@ class InputActivity : AppCompatActivity() {
         }else{
             title_edit_text.setText(mTask!!.title)
             content_edit_text.setText(mTask!!.contents)
+            category_edit_text.setText(mTask!!.category)
 
             val calendar=Calendar.getInstance()
             calendar.time=mTask!!.date
@@ -112,17 +117,33 @@ class InputActivity : AppCompatActivity() {
 
         val title=title_edit_text.text.toString()
         val content=content_edit_text.text.toString()
+        val category=category_edit_text.text.toString()
 
         mTask!!.title=title
         mTask!!.contents=content
+        mTask!!.category=category
+
         val calendar=GregorianCalendar(mYear,mMonth,mDay,mHour,mMinute)
         val date=calendar.time
         mTask!!.date=date
+
 
         realm.copyToRealmOrUpdate(mTask!!)
         realm.commitTransaction()
 
         realm.close()
+
+        val resultIntent=Intent(applicationContext,TaskAlarmReceiver::class.java)
+        resultIntent.putExtra(EXTRA_TASK,mTask!!.id)
+        val resultPendingIntent=PendingIntent.getBroadcast(
+                this,
+                mTask!!.id,
+                resultIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val alarmManager=getSystemService(ALARM_SERVICE) as AlarmManager
+        alarmManager.set(AlarmManager.RTC_WAKEUP,calendar.timeInMillis,resultPendingIntent)
 
     }
 }

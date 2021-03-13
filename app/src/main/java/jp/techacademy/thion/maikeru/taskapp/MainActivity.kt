@@ -1,17 +1,19 @@
 package jp.techacademy.thion.maikeru.taskapp
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.SearchView
 import androidx.appcompat.app.AlertDialog
-import io.realm.Realm
-import io.realm.RealmChangeListener
-import io.realm.Sort
+import io.realm.*
 import java.util.*
 
 const val EXTRA_TASK="jp.techacademy.thion.maikeru.taskapp.TASK"
@@ -31,8 +33,8 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).show()
+            val intent=Intent(this,InputActivity::class.java)
+            startActivity(intent)
         }
 
         // Realmの設定
@@ -42,6 +44,7 @@ class MainActivity : AppCompatActivity() {
         // ListViewの設定
         mTaskAdapter = TaskAdapter(this)
 
+
         // ListViewをタップしたときの処理
         listView1.setOnItemClickListener { parent, view, position, id ->
             val task=parent.adapter.getItem(position) as Task
@@ -50,6 +53,26 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
             // 入力・編集する画面に遷移させる
         }
+
+
+        searchView.setOnQueryTextListener(object :SearchView.OnQueryTextListener {
+            override fun onQueryTextChange(newText:String):Boolean{
+                val searchRealmResults = mRealm.where(Task::class.java).equalTo("category",newText).findAll()
+                mTaskAdapter.mTaskList = mRealm.copyFromRealm(searchRealmResults)
+
+                // TaskのListView用のアダプタに渡す
+                listView1.adapter = mTaskAdapter
+                mTaskAdapter.notifyDataSetChanged()
+                // 表示を更新するために、アダプターにデータが変更されたことを知らせる
+                return false
+            }
+            override fun onQueryTextSubmit(query:String):Boolean{
+                return false
+            }
+        })
+
+
+
 
         // ListViewを長押ししたときの処理
         listView1.setOnItemLongClickListener { parent, view, position, id ->
@@ -65,6 +88,17 @@ class MainActivity : AppCompatActivity() {
                 results.deleteAllFromRealm()
                 mRealm.commitTransaction()
 
+                val resultIntent=Intent(applicationContext,TaskAlarmReceiver::class.java)
+                val resultPendingIntent=PendingIntent.getBroadcast(
+                    this,
+                    task.id,
+                    resultIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT
+                )
+
+                val alarmManager=getSystemService(ALARM_SERVICE) as AlarmManager
+                alarmManager.cancel(resultPendingIntent)
+
                 reloadListView()
             }
 
@@ -76,6 +110,8 @@ class MainActivity : AppCompatActivity() {
         }
         reloadListView()
     }
+
+
 
     private fun reloadListView() {
         // Realmデータベースから、「すべてのデータを取得して新しい日時順に並べた結果」を取得
@@ -102,9 +138,15 @@ class MainActivity : AppCompatActivity() {
         task.title = "作業"
         task.contents = "プログラムを書いてPUSHする"
         task.date = Date()
+        task.category="プライベート"
         task.id = 0
         mRealm.beginTransaction()
         mRealm.copyToRealmOrUpdate(task)
         mRealm.commitTransaction()
     }
 }
+
+/*private fun <E> RealmQuery<E>.equalTo(s: String, query: CharSequence?): Any {
+
+
+}*/

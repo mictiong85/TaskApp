@@ -35,4 +35,5 @@
     <style name="AppTheme.Base"
         parent="@style/Theme.AppCompat.Light">
     </style>
+
 </resources>
